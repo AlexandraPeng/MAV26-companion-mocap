@@ -1,0 +1,13 @@
+/**/local_position:
+  ros__parameters:
+    frame_id: "world"
+    tf.send: true
+    tf.frame_id: "world"
+    tf.child_frame_id: "base_link"
+
+/**/vision_pose:
+  ros__parameters:
+    tf.listen: false
+    tf.frame_id: "world"
+    tf.child_frame_id: "vision_estimate"
+    tf.rate_limit: 100.0
