@@ -21,6 +21,24 @@ def _setup(context):
     domain_id = int(LaunchConfiguration("ros_domain_id").perform(context))
     frame_id = LaunchConfiguration("frame_id").perform(context)
     child_frame_id = LaunchConfiguration("child_frame_id").perform(context)
+    vrpn_pose_topic = LaunchConfiguration("vrpn_pose_topic").perform(context).strip()
+    mavros_vision_topic = LaunchConfiguration("mavros_vision_topic").perform(context).strip()
+    transform_parameters = {
+        name: float(LaunchConfiguration(name).perform(context))
+        for name in (
+            "translation_x",
+            "translation_y",
+            "translation_z",
+            "world_rotation_qx",
+            "world_rotation_qy",
+            "world_rotation_qz",
+            "world_rotation_qw",
+            "body_rotation_qx",
+            "body_rotation_qy",
+            "body_rotation_qz",
+            "body_rotation_qw",
+        )
+    }
 
     if not rigid_body or "/" in rigid_body:
         raise RuntimeError("rigid_body 必须是非空的单个 VRPN 刚体名")
@@ -41,7 +59,10 @@ def _setup(context):
 
     package_share = get_package_share_directory("uav_bringup")
     mavros_share = get_package_share_directory("mavros")
-    vrpn_pose_topic = f"/vrpn_mocap/{rigid_body}/pose"
+    if not vrpn_pose_topic:
+        vrpn_pose_topic = f"/vrpn_mocap/{rigid_body}/pose"
+    if not vrpn_pose_topic.startswith("/") or not mavros_vision_topic.startswith("/"):
+        raise RuntimeError("位姿话题必须使用绝对话题名（以 / 开头）")
 
     with open(f"{mavros_share}/launch/px4_config.yaml", encoding="utf-8") as stream:
         mavros_config = yaml.safe_load(stream)
@@ -122,8 +143,9 @@ def _setup(context):
             parameters=[
                 {
                     "input_topic": vrpn_pose_topic,
-                    "output_topic": "/mavros/vision_pose/pose",
+                    "output_topic": mavros_vision_topic,
                     "frame_id": frame_id,
+                    **transform_parameters,
                 }
             ],
             output="screen",
@@ -145,6 +167,21 @@ def generate_launch_description():
             DeclareLaunchArgument("ros_domain_id", default_value="0"),
             DeclareLaunchArgument("frame_id", default_value="world"),
             DeclareLaunchArgument("child_frame_id", default_value="base_link"),
+            DeclareLaunchArgument("vrpn_pose_topic", default_value=""),
+            DeclareLaunchArgument(
+                "mavros_vision_topic", default_value="/mavros/vision_pose/pose"
+            ),
+            DeclareLaunchArgument("translation_x", default_value="0.0"),
+            DeclareLaunchArgument("translation_y", default_value="0.0"),
+            DeclareLaunchArgument("translation_z", default_value="0.0"),
+            DeclareLaunchArgument("world_rotation_qx", default_value="0.5"),
+            DeclareLaunchArgument("world_rotation_qy", default_value="0.5"),
+            DeclareLaunchArgument("world_rotation_qz", default_value="0.5"),
+            DeclareLaunchArgument("world_rotation_qw", default_value="0.5"),
+            DeclareLaunchArgument("body_rotation_qx", default_value="0.0"),
+            DeclareLaunchArgument("body_rotation_qy", default_value="0.0"),
+            DeclareLaunchArgument("body_rotation_qz", default_value="0.0"),
+            DeclareLaunchArgument("body_rotation_qw", default_value="1.0"),
             SetEnvironmentVariable("ROS_DOMAIN_ID", LaunchConfiguration("ros_domain_id")),
             OpaqueFunction(function=_setup),
         ]
