@@ -5,7 +5,7 @@
 ## 设备与连接
 
 - 树莓派：Ubuntu 24.04、ARM64、ROS 2 Jazzy。
-- 地面站：Ubuntu 24.04、ROS 2 Jazzy、RViz 2。
+- 地面站（可选）：Ubuntu 24.04、ROS 2 Jazzy。核心链路不需要 RViz。
 - 动捕 VRPN 服务：默认地址 `192.168.183.29:3883`，按现场网络修改。
 - PX4 飞控串口连接树莓派 40 针排针 GPIO Pin 8/10，设备路径使用 `/dev/ttyAMA0`。Pin 8（TX）接飞控 RX，Pin 10（RX）接飞控 TX，并连接 GND；PX4 对应端口须启用 MAVLink，串口波特率须与启动参数一致。
 - 两台 ROS 2 主机需设置相同的 `ROS_DOMAIN_ID`；默认使用 `0`。
@@ -19,11 +19,11 @@ sudo apt update
 sudo apt install ros-jazzy-ros-base ros-jazzy-mavros ros-jazzy-mavros-extras ros-jazzy-vrpn-mocap
 ```
 
-在地面站安装 ROS 2 桌面版和 RViz：
+如需从地面站查看 ROS 2 话题，只需安装 ROS 2 基础环境：
 
 ```bash
 sudo apt update
-sudo apt install ros-jazzy-desktop ros-jazzy-rviz2
+sudo apt install ros-jazzy-ros-base
 ```
 
 ## 获取并构建
@@ -40,7 +40,7 @@ colcon build --symlink-install
 
 ## 启动
 
-先在地面站启动 ROS 2 环境（当前暂不启动 RViz）：
+无 RViz 版本不需要启动地面站图形程序。若需要从地面站检查数据，打开终端加载 ROS 2 环境：
 
 ```bash
 cd ~/uav_ws
@@ -69,7 +69,7 @@ sudo usermod -aG dialout "$USER"
 
 MAVROS 使用 PX4 插件列表与配置，并加载本仓库的坐标系设置。树莓派上的 `pose_relay` 以 best-effort 兼容 QoS 订阅 `/vrpn_mocap/<刚体名>/pose`，再以 reliable QoS 发布到 `/mavros/vision_pose/pose`。它对位置应用世界系四元数旋转和平移，并对姿态应用世界系旋转和机体系旋转。按 NOKOV X=北、Y=天（上）、Z=东配置时，默认世界旋转四元数为 `(0.5, 0.5, 0.5, 0.5)`，将 NOKOV 北天东转换到 MAVROS 所需的 ROS ENU；MAVROS 再负责转换到 PX4 NED。平移默认零。启动脚本用 `POSE_WORLD_QX/QY/QZ/QW` 和 `POSE_TRANSLATION_X/Y/Z` 覆盖世界系变换，用 `POSE_BODY_QX/QY/QZ/QW` 设置机体系旋转；四元数顺序为 x、y、z、w，平移单位为米。当前默认不改变刚体自身轴向，若 NOKOV 刚体坐标与 ROS `base_link` 不一致，还需标定机体系旋转。输入时间戳会保留，只有零时间戳才补当前 ROS 时间。日志会在首个位姿成功转发后报告。
 
-地面站要订阅树莓派的话题，需两台主机的 ROS 2 DDS 网络发现正常且 `ROS_DOMAIN_ID` 相同。地面站 source ROS 环境后可直接检查：
+地面站要订阅树莓派的话题，需两台主机的 ROS 2 DDS 网络发现正常且 `ROS_DOMAIN_ID` 相同。地面站加载 ROS 环境后可直接检查：
 
 ```bash
 ros2 topic list
@@ -102,4 +102,4 @@ ros2 run tf2_ros tf2_echo world base_link
 
 `/mavros/state` 中 `connected` 应为 `true`。若为 `false`，检查 PX4 对应串口是否启用 MAVLink、TX/RX 是否交叉、是否共地、设备路径和波特率是否匹配，以及串口是否被其他进程占用。若 VRPN 话题无数据，检查服务地址、端口和刚体名。两台主机无法互相发现话题时，检查 `ROS_DOMAIN_ID` 和网络 DDS 通信。
 
-实机测试前需先确认坐标轴约定、位姿频率与失联行为，以及急停和遥控接管有效；本配置不会发送 Offboard 设定点或执行飞行动作。
+无 RViz 版本使用命令行验证话题和 TF。实机测试前需先确认坐标轴约定、位姿频率与失联行为，以及急停和遥控接管有效；本配置不会发送 Offboard 设定点或执行飞行动作。

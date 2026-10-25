@@ -16,7 +16,6 @@
   <exec_depend>mavros</exec_depend>
   <exec_depend>mavros_extras</exec_depend>
   <exec_depend>vrpn_mocap</exec_depend>
-  <exec_depend>rviz2</exec_depend>
   <export>
     <build_type>ament_python</build_type>
   </export>

@@ -12,7 +12,6 @@ setup(
         ("share/" + package_name, ["package.xml"]),
         ("share/" + package_name + "/launch", glob("launch/*")),
         ("share/" + package_name + "/config", glob("config/*")),
-        ("share/" + package_name + "/rviz", glob("rviz/*")),
         ("share/" + package_name + "/scripts", glob("scripts/*")),
     ],
     install_requires=["setuptools"],
